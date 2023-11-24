@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IndexedDB CRUD with Dexie</title>
+    <!-- Add Dexie library -->
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+  </head>
+  <body>
+    <h1>IndexedDB CRUD with Dexie</h1>
+
+    <!-- Form for adding a new friend -->
+    <form id="addFriendForm">
+      <label for="name">Name:</label>
+      <input type="text" id="name" required />
+
+      <label for="age">Age:</label>
+      <input type="number" id="age" required />
+
+      <button type="submit">Add Friend</button>
+    </form>
+
+    <!-- Display the list of friends -->
+    <ul id="friendsList"></ul>
+
+    <script>
+      // Create a new Dexie instance
+      const db = new Dexie('MyDatabase');
+
+      // Define the 'friends' table
+      db.version(1).stores({
+        friends: '++id,name,age',
+      });
+
+      // Open the database
+      db.open();
+
+      // DOM elements
+      const addFriendForm = document.getElementById('addFriendForm');
+      const friendsList = document.getElementById('friendsList');
+
+      // Event listener for the form submission
+      addFriendForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        // Get values from the form
+        const name = document.getElementById('name').value;
+        const age = parseInt(document.getElementById('age').value);
+
+        // Add a friend to the 'friends' table
+        db.friends
+          .add({ name, age })
+          .then((id) => {
+            console.log(`Added friend with ID ${id}`);
+            // Clear the form
+            addFriendForm.reset();
+            // Refresh the friends list
+            displayFriends();
+          })
+          .catch((error) => console.error(`Error adding friend: ${error}`));
+      });
+
+      // Function to display friends in the list
+      function displayFriends() {
+        // Clear the existing list
+        friendsList.innerHTML = '';
+
+        // Retrieve all friends
+        db.friends
+          .toArray()
+          .then((friends) => {
+            friends.forEach((friend) => {
+              // Create a list item for each friend
+              const listItem = document.createElement('li');
+              listItem.textContent = `${friend.name} (Age: ${friend.age})`;
+
+              // Add a delete button
+              const deleteButton = document.createElement('button');
+              deleteButton.textContent = 'Delete';
+              deleteButton.addEventListener('click', () =>
+                deleteFriend(friend.id)
+              );
+
+              // Append the delete button to the list item
+              listItem.appendChild(deleteButton);
+
+              // Append the list item to the friends list
+              friendsList.appendChild(listItem);
+            });
+          })
+          .catch((error) => console.error(`Error querying friends: ${error}`));
+      }
+
+      // Function to delete a friend by ID
+      function deleteFriend(id) {
+        db.friends
+          .delete(id)
+          .then(() => {
+            console.log(`Deleted friend with ID ${id}`);
+            // Refresh the friends list
+            displayFriends();
+          })
+          .catch((error) => console.error(`Error deleting friend: ${error}`));
+      }
+
+      // Initial display of friends
+      displayFriends();
+    </script>
+  </body>
+</html>
